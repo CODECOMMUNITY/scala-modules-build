@@ -1,0 +1,120 @@
+{
+  properties: "https://raw.github.com/scala/scala/master/versions.properties"
+  build: {
+    "projects":[
+      {
+        system: assemble
+        name:   scala2
+        extra.parts.options: {
+          cross-version: standard
+          sbt-version: "0.13.0"
+        }
+        extra.parts.projects: [
+          {
+            name:  "scala",
+            system: "scala",
+            uri:    "git://github.com/scala/scala.git#master",
+          },
+          {
+            name: "scala-xml",
+            uri: "https://github.com/scala/scala-xml.git"
+            extra: {
+              sbt-version: "0.13.0"
+            }
+          },
+          {
+            name: "scala-parser-combinators",
+            uri: "https://github.com/scala/scala-parser-combinators.git"
+            extra: {
+              sbt-version: "0.13.0"
+            }
+          },
+          {
+            name:   "scalacheck",
+            uri:    "https://github.com/rickynils/scalacheck.git"
+          },
+          {
+            name: "scala-partest",
+            uri: "https://github.com/scala/scala-partest.git"
+            extra: {
+              sbt-version: "0.13.0"
+            }
+          },
+          {
+            name: "scala-partest-interface",
+            uri: "https://github.com/scala/scala-partest-interface.git"
+            extra: {
+              sbt-version: "0.13.0"
+            }
+          }
+        ]
+      },
+      {
+        name:   "sbinary",
+        uri:    "git://github.com/harrah/sbinary.git#2.11"
+        extra: {
+          projects: ["core"],
+          run-tests: false // Sbinary has some invalid case classes currently.
+        }
+      }, {
+        name:   "sbt",
+        uri:    "git://github.com/sbt/sbt.git#0.13-2.11"
+        extra: {
+          projects: ["compiler-interface",
+                     "classpath","logging","io","control","classfile",
+                     "process","relation","interface","persist","api",
+                     "compiler-integration","incremental-compiler","compile","launcher-interface"
+                    ],
+          run-tests: false,
+          commands: [ "set every Util.includeTestDependencies := false" // Without this, we have to build specs2
+                    ]
+        }
+      }
+    ],
+    options:{cross-version:standard},
+  }
+  options: {
+    # deploy: [
+    #   {
+    #     uri=${?vars.publish-repo},
+    #     credentials="/home/jenkinsdbuild/dbuild-josh-credentials.properties",
+    #     projects:["sbt-republish"]
+    #   }
+    # ]
+    notifications: {
+      send:[{
+        projects: "."
+        send.to: "qbranch@typesafe.com"
+        when: bad
+      },{ 
+        projects: "."
+        kind: console
+        when: always
+      }]
+      default.send: {
+        from: "jenkins-dbuild <antonio.cunei@typesafe.com>"
+        smtp:{
+          server: "psemail.epfl.ch"
+          encryption: none
+        }
+      }
+    }
+  }
+}
+
+
+// {
+//   name:  "scala-compiler-doc",
+//   system: "ivy",
+//   set-version: ${vars.scala-compiler-doc.version.number}
+//   uri:    "ivy:org.scala-lang.modules#scala-compiler-doc_"${vars.scala.binary.version}";"${vars.scala-compiler-doc.version.number}
+// }, {
+//   name:  "scala-compiler-interactive",
+//   system: "ivy",
+//   set-version: ${vars.scala-compiler-interactive.version.number}
+//   uri:    "ivy:org.scala-lang.modules#scala-compiler-interactive_"${vars.scala.binary.version}";"${vars.scala-compiler-interactive.version.number}
+// },
+
+// commands: [ 
+//   "set TestKeys.includeTestDependencies := false" // Break the cycle between Partest + scala-xml
+//  ]
