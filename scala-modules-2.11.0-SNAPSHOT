@@ -1,77 +1,67 @@
 {
   properties: "https://raw.github.com/scala/scala/master/versions.properties"
   build: {
-    "projects":[
+    projects:[
       {
         system: assemble
-        name:   scala2
-        extra.parts.options: {
-          cross-version: standard
-          sbt-version: "0.13.0"
+        name: scala2
+        deps.ignore: "org.scalacheck#scalacheck"
+        extra.parts.options:{
+          cross-version:standard
+          sbt-version:"0.13.0"
         }
         extra.parts.projects: [
           {
-            name:  "scala",
-            system: "scala",
-            uri:    "git://github.com/scala/scala.git#master",
-          },
+            name: scala
+            system: scala
+            uri: "git://github.com/scala/scala.git#master"
+          }
           {
-            name: "scala-xml",
+            name: scala-xml
             uri: "https://github.com/scala/scala-xml.git"
-            extra: {
-              sbt-version: "0.13.0"
-            }
-          },
+          }
           {
-            name: "scala-parser-combinators",
+            name: scala-parser-combinators
             uri: "https://github.com/scala/scala-parser-combinators.git"
-            extra: {
-              sbt-version: "0.13.0"
-            }
-          },
+          }
           {
-            name:   "scalacheck",
-            uri:    "https://github.com/rickynils/scalacheck.git"
-          },
-          {
-            name: "scala-partest",
+            name: scala-partest
             uri: "https://github.com/scala/scala-partest.git"
-            extra: {
-              sbt-version: "0.13.0"
-            }
-          },
+          }
           {
-            name: "scala-partest-interface",
+            name: scala-partest-interface
             uri: "https://github.com/scala/scala-partest-interface.git"
-            extra: {
-              sbt-version: "0.13.0"
-            }
           }
         ]
-      },
+      }
       {
-        name:   "sbinary",
-        uri:    "git://github.com/harrah/sbinary.git#2.11"
+        name: scalacheck
+        uri: "https://github.com/rickynils/scalacheck.git"
+      }
+      {
+        name: sbinary
+        uri: "git://github.com/harrah/sbinary.git#2.11"
         extra: {
-          projects: ["core"],
+          projects: core
           run-tests: false // Sbinary has some invalid case classes currently.
         }
       }, {
-        name:   "sbt",
-        uri:    "git://github.com/sbt/sbt.git#0.13-2.11"
+        name: sbt
+        uri: "git://github.com/sbt/sbt.git#0.13-2.11"
         extra: {
           projects: ["compiler-interface",
                      "classpath","logging","io","control","classfile",
                      "process","relation","interface","persist","api",
                      "compiler-integration","incremental-compiler","compile","launcher-interface"
-                    ],
-          run-tests: false,
+                    ]
+          run-tests: false
           commands: [ "set every Util.includeTestDependencies := false" // Without this, we have to build specs2
                     ]
+          sbt-version: "0.12.4"
         }
       }
     ],
-    options:{cross-version:standard},
+    options:{cross-version:standard, sbt-version:"0.13.0"}
   }
   options: {
     # deploy: [
