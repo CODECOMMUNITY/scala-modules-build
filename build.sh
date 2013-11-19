@@ -1,93 +1,69 @@
-#!/bin/bash
+#!/bin/bash -e
 
- SCALA_BINARY_VER="2.11.0-M5"
-        SCALA_VER="2.11.0-M5"
-   SCALACHECK_VER="1.10.1"
-          XML_VER="1.0.0-RC5"
-      PARSERS_VER="1.0.0-RC3"
-      PARTEST_VER="1.0.0-RC6"
+        SCALA_VER="2.11.0-M7"
+          XML_VER="1.0.0-RC7"
+      PARSERS_VER="1.0.0-RC5"
+   SCALACHECK_VER="1.11.0"
+      PARTEST_VER="1.0.0-RC8"
 PARTEST_IFACE_VER="0.2"
 
+publishTask=publish-local #signed
+buildLocal=true
 
-echo "NOTE: THIS WIPES OUT ANY LOCAL CHANGES IN ~/git/scala-partest-interface ~/git/scala-partest ~/git/scalacheck ~/git/scala-parser-combinators ~/git/scala-xml"
-echo "Also, I assume you've cleaned your local ~/.ivy2 repo."
-echo "Press the any key to proceed"
-read
+$buildLocal || (
+  echo "NOTE: THIS WIPES OUT ANY LOCAL CHANGES IN ~/git/scala ~/git/scala-partest-interface ~/git/scala-partest ~/git/scalacheck ~/git/scala-parser-combinators ~/git/scala-xml"
+  echo "Also, I assume you've cleaned your local ~/.ivy2 and ~/.m2 repos."
+  echo "Press the any key to proceed"
+  read
+)
 
-update() { git pull $1 $2 && git clean -fxd && git --no-pager show ; }
+update() { exit 1; git pull $1 $2 && git clean -fxd && git --no-pager show ; }
 
-set -ex
-
-cd ~/git/scala-xml && update https://github.com/scala/scala-xml.git master
-sbt 'set TestKeys.includeTestDependencies := false' \
-    'set version := "'$XML_VER'"' \
+# test and publish to sonatype, assuming you have ~/.sbt/0.13/sonatype.sbt and ~/.sbt/0.13/plugin/gpg.sbt
+cd ~/git/scala-xml && ($buildLocal || \
+  (update https://github.com/scala/scala-xml.git master && \
+   git tag -s "v$XML_VER" -m"Scala Standard XML Library v$XML_VER")) && \
+sbt 'set version := "'$XML_VER'"' \
     'set scalaVersion := "'$SCALA_VER'"' \
-    'set scalaBinaryVersion := "'$SCALA_BINARY_VER'"' \
-    publish-local
+    clean test $publishTask publishM2
 
-cd ~/git/scala-parser-combinators && update https://github.com/scala/scala-parser-combinators.git master
-sbt 'set TestKeys.includeTestDependencies := false' \
-    'set version := "'$PARSERS_VER'"' \
+cd ~/git/scala-parser-combinators && ($buildLocal ||\
+  (update https://github.com/scala/scala-parser-combinators.git master && \
+   git tag -s "v$PARSERS_VER" -m"Scala Standard Parser Combinators Library v$PARSERS_VER")) && \
+sbt 'set version := "'$PARSERS_VER'"' \
     'set scalaVersion := "'$SCALA_VER'"' \
-    'set scalaBinaryVersion := "'$SCALA_BINARY_VER'"' \
-    publish-local
+    clean test $publishTask publishM2
 
-cd ~/git/scalacheck && update https://github.com/rickynils/scalacheck.git master
+cd ~/git/scalacheck && ($buildLocal || (update https://github.com/adriaanm/scalacheck.git master)) && \
 sbt 'set version := "'$SCALACHECK_VER'"' \
     'set scalaVersion := "'$SCALA_VER'"' \
-    'set every scalaBinaryVersion := "'$SCALA_BINARY_VER'"' \
-    publish-local
+    'set every scalaBinaryVersion := "'$SCALA_VER'"' \
+    'set VersionKeys.scalaParserCombinatorsVersion := "'$PARSERS_VER'"' \
+    clean test publish-local publishM2
 
-cd ~/git/scala-partest && update https://github.com/scala/scala-partest.git master
-sbt 'set version :="'$PARTEST_VER'"' \
-    'set DependencyKeys.scalaXmlVersion := "'$XML_VER'"' \
-    'set scalaVersion := "'$SCALA_VER'"' \
-    'set scalaBinaryVersion := "'$SCALA_BINARY_VER'"' \
-    publish-local
-
-
-cd ~/git/scala-partest-interface && update https://github.com/scala/scala-partest-interface.git master
-sbt 'set version :="'$PARTEST_IFACE_VER'"' \
-    'set scalaVersion := "'$SCALA_VER'"' \
-    'set scalaBinaryVersion := "'$SCALA_BINARY_VER'"' \
-    publish-local
-
-# allow invidual steps to fail (if version was already tagged, assume it was already published)
-set +ex
-
-# Now test and publish to sonatype, assuming you have ~/.sbt/0.13/sonatype.sbt and ~/.sbt/0.13/plugin/gpg.sbt
-cd ~/git/scala-xml && git tag -s "v$XML_VER"                          -m"Scala Standard XML Library v$XML_VER" && \
-sbt 'set version := "'$XML_VER'"' \
-    'set TestKeys.partestVersion := "'$PARTEST_VER'"' \
-    'set scalaVersion := "'$SCALA_VER'"' \
-    'set scalaBinaryVersion := "'$SCALA_BINARY_VER'"' \
-    test publish-signed
-
-cd ~/git/scala-parser-combinators && git tag -s "v$PARSERS_VER"       -m"Scala Standard Parser Combinators Library v$PARSERS_VER" && \
-sbt 'set version := "'$PARSERS_VER'"' \
-    'set TestKeys.partestVersion := "'$PARTEST_VER'"' \
-    'set scalaVersion := "'$SCALA_VER'"' \
-    'set scalaBinaryVersion := "'$SCALA_BINARY_VER'"' \
-    test publish-signed
-
-cd ~/git/scala-partest && git tag -s "v$PARTEST_VER"                  -m"Scala Partest v$PARTEST_VER" && \
+cd ~/git/scala-partest  && ($buildLocal ||\
+  (update https://github.com/scala/scala-partest.git master && git tag -s "v$PARTEST_VER" -m"Scala Partest v$PARTEST_VER")) && \
 sbt 'set version :="'$PARTEST_VER'"' \
     'set scalaVersion := "'$SCALA_VER'"' \
-    'set scalaBinaryVersion := "'$SCALA_BINARY_VER'"' \
-    publish-signed
+    'set VersionKeys.scalaXmlVersion := "'$XML_VER'"' \
+    'set VersionKeys.scalaCheckVersion := "'$SCALACHECK_VER'"' \
+    clean $publishTask publishM2
 
-
-cd ~/git/scala-partest-interface && git tag -s "v$PARTEST_IFACE_VER"  -m"Scala Partest Interface v$PARTEST_IFACE_VER" && \
+cd ~/git/scala-partest-interface  && ($buildLocal ||\
+  (update https://github.com/scala/scala-partest-interface.git master && git tag -s "v$PARTEST_IFACE_VER"  -m"Scala Partest Interface v$PARTEST_IFACE_VER")) && \
 sbt 'set version :="'$PARTEST_IFACE_VER'"' \
     'set scalaVersion := "'$SCALA_VER'"' \
-    'set scalaBinaryVersion := "'$SCALA_BINARY_VER'"' \
-    publish-signed
+    clean $publishTask publishM2
 
+# Sanity check: make sure the Scala test suite passes / docs can be generated with these modules.
+cd ~/git/scala && git checkout "v$SCALA_VER" && git clean -fxd
+ant -Dstarr.version=$SCALA_VER -Dstarr.use.released=1\
+    -Dlocker.skip=1\
+    -Dscala.binary.version=$SCALA_VER\
+    -Dpartest.version.number=$PARTEST_VER\
+    -Dscala-xml.version.number=$XML_VER\
+    -Dscala-parser-combinators.version.number=$PARSERS_VER\
+    -Dscalacheck.version.number=$SCALACHECK_VER\
+    test-opt docs.done
 
-
-
-# // misc
-# 
-# set libraryDependencies  ~= { ld => ld collect { case dep if dep.classifier != Some(test) => dep } }
-# 
-# set libraryDependencies  ~= { ld => ld map { case dep if (dep.organization == "org.scala-lang.modules") => dep cross CrossVersion.fullMapped(_ => "2.11.0-M5") case dep => dep } }
+say "Woohoo"
