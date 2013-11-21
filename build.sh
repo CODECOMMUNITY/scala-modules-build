@@ -3,11 +3,11 @@
         SCALA_VER="2.11.0-M7"
           XML_VER="1.0.0-RC7"
       PARSERS_VER="1.0.0-RC5"
-   SCALACHECK_VER="1.11.0"
+   SCALACHECK_VER="1.11.1"
       PARTEST_VER="1.0.0-RC8"
 PARTEST_IFACE_VER="0.2"
 
-publishTask=publish-local #signed
+publishTask=publish-signed
 buildLocal=true
 
 $buildLocal || (
@@ -17,7 +17,7 @@ $buildLocal || (
   read
 )
 
-update() { exit 1; git pull $1 $2 && git clean -fxd && git --no-pager show ; }
+update() { git pull $1 $2 && git clean -fxd && git --no-pager show ; }
 
 # test and publish to sonatype, assuming you have ~/.sbt/0.13/sonatype.sbt and ~/.sbt/0.13/plugin/gpg.sbt
 cd ~/git/scala-xml && ($buildLocal || \
@@ -56,7 +56,7 @@ sbt 'set version :="'$PARTEST_IFACE_VER'"' \
     clean $publishTask publishM2
 
 # Sanity check: make sure the Scala test suite passes / docs can be generated with these modules.
-cd ~/git/scala && git checkout "v$SCALA_VER" && git clean -fxd
+cd ~/git/scala #&& git checkout "v$SCALA_VER" && git clean -fxd
 ant -Dstarr.version=$SCALA_VER -Dstarr.use.released=1\
     -Dlocker.skip=1\
     -Dscala.binary.version=$SCALA_VER\
@@ -66,4 +66,9 @@ ant -Dstarr.version=$SCALA_VER -Dstarr.use.released=1\
     -Dscalacheck.version.number=$SCALACHECK_VER\
     test-opt docs.done
 
-say "Woohoo"
+say "Woo-hoo\!"
+
+# used when testing scalacheck integration with partest, while it's in staging repo before releasing it
+#     'set resolvers += "scalacheck staging" at "http://oss.sonatype.org/content/repositories/orgscalacheck-1010/"' \
+# in ant: ()
+#     -Dextra.repo.url=http://oss.sonatype.org/content/repositories/orgscalacheck-1010/\
