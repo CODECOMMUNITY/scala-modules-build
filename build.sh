@@ -33,7 +33,7 @@ update() {
   [[ -d $2 ]] || git clone $repo
   cd $2
 
-  git pull --rebase $repo $ref
+#  git pull --rebase $repo $ref
 
   $buildLocal || (git fetch $repo $ref && git reset --hard FETCH_HEAD && git clean -fxd)
 
@@ -51,14 +51,14 @@ publishModules() {
   sbt 'set version := "'$XML_VER'"' \
       'set resolvers += Resolver.mavenLocal'\
       'set scalaVersion := "'$SCALA_VER'"' \
-      clean $2 $publishTask publishM2
+      clean test $publishTask publishM2
 
   update scala scala-parser-combinators
   tag "v$PARSERS_VER" "Scala Standard Parser Combinators Library v$PARSERS_VER"
   sbt 'set version := "'$PARSERS_VER'"' \
       'set resolvers += Resolver.mavenLocal'\
       'set scalaVersion := "'$SCALA_VER'"' \
-      clean $2 $publishTask publishM2
+      clean test $publishTask publishM2
 
   update rickynils scalacheck $SCALACHECK_VER
   sbt 'set version := "'$SCALACHECK_VER'"' \
@@ -66,7 +66,7 @@ publishModules() {
       'set scalaVersion := "'$SCALA_VER'"' \
       'set every scalaBinaryVersion := "'$SCALA_VER'"' \
       'set VersionKeys.scalaParserCombinatorsVersion := "'$PARSERS_VER'"' \
-      clean $2 publish-local publishM2
+      clean test publish-local publishM2
 
   update scala scala-partest
   tag "v$PARTEST_VER" "Scala Partest v$PARTEST_VER"
@@ -88,11 +88,13 @@ publishModules() {
 update scala scala
 
 # publish core so that we can build modules with this version of Scala and publish them locally
-ant -Dmaven.version.suffix=$MAVEN_SUFFIX\
+# must publish under $SCALA_VER so that the modules will depend on this (binary) version of Scala
+# publish more than just core: partest needs scalap
+ant -Dmaven.version.number=$SCALA_VER\
     -Dscalac.args.optimise=-optimise\
     -Ddocs.skip=1\
     -Dlocker.skip=1\
-    publish-core-local
+    publish.local
 
 # build, test and publish modules with this core
 publishModules publish-local
@@ -102,23 +104,23 @@ publishModules publish-local
 # Sanity check: make sure the Scala test suite passes / docs can be generated with these modules.
 # don't skip locker (-Dlocker.skip=1\), or stability will fail
 cd $baseDir/scala
-ant -Dmaven.version.suffix=$MAVEN_SUFFIX\
-    -Dscalac.args.optimise=-optimise\
-    -Dstarr.version=$SCALA_VER\
+ant -Dstarr.version=$SCALA_VER\
+    -Dmaven.version.suffix=$MAVEN_SUFFIX\
     -Dscala.binary.version=$SCALA_VER\
     -Dpartest.version.number=$PARTEST_VER\
     -Dscala-xml.version.number=$XML_VER\
     -Dscala-parser-combinators.version.number=$PARSERS_VER\
     -Dscalacheck.version.number=$SCALACHECK_VER\
     -Dupdate.versions=1\
-    test $publishAnt
+    -Dscalac.args.optimise=-optimise\
+    $publishAnt #test
 
 git commit versions.properties -m"Bump versions.properties for $SCALA_VER."
 
 tag "v$SCALA_VER" "Scala v$SCALA_VER"
 
 # rebuild modules for good measure
-publishModules $publishSbt test
+publishModules $publishSbt
 
 say "Woo-hoo\!"
 
