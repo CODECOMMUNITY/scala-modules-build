@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-     MAVEN_SUFFIX="-M8"
+     MAVEN_SUFFIX="-local-m8"
         SCALA_VER="2.11.0$MAVEN_SUFFIX"
           XML_VER="1.0.0-RC7"
       PARSERS_VER="1.0.0-RC5"
@@ -11,9 +11,11 @@ PARTEST_IFACE_VER="0.2"
 baseDir="/Users/adriaan/git/"
 
 buildLocal=true
-testQuick="" # test
 publishQuick=publish.local #publish.signed
 publishModule=publish-local #publish-signed
+
+# NOTE: when running test suite, don't skip locker (-Dlocker.skip=1), or stability will fail
+testQuick="test"
 
 # TODO: clean local repo, or publish to a fresh one
 
@@ -25,7 +27,7 @@ $buildLocal || (
 )
 
 update() {
-  $buildLocal && cd $baseDir/$2 && return 0
+  # $buildLocal && cd $baseDir/$2 && return 0
 
   repo="https://github.com/$1/$2.git"
   ref=${3-master}
@@ -103,7 +105,8 @@ publishModules publish-local
 # Rebuild Scala with these modules so that all binary versions are consistent.
 # Update versions.properties to new modules.
 # Sanity check: make sure the Scala test suite passes / docs can be generated with these modules.
-# don't skip locker (-Dlocker.skip=1\), or stability will fail
+# NOTE: when running test suite, don't skip locker (-Dlocker.skip=1), or stability will fail
+# otherwise, the locker stage isn't needed
 cd $baseDir/scala
 ant -Dstarr.version=$SCALA_VER\
     -Dmaven.version.suffix=$MAVEN_SUFFIX\
@@ -113,7 +116,7 @@ ant -Dstarr.version=$SCALA_VER\
     -Dscala-parser-combinators.version.number=$PARSERS_VER\
     -Dscalacheck.version.number=$SCALACHECK_VER\
     -Dupdate.versions=1\
-    -Dlocker.skip=1\
+    # -Dlocker.skip=1\
     -Dscalac.args.optimise=-optimise\
     $publishQuick $testQuick
 
