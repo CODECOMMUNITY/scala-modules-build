@@ -11,8 +11,9 @@ PARTEST_IFACE_VER="0.2"
 baseDir="/Users/adriaan/git/"
 
 buildLocal=true
-publishAnt=publish.local #publish.signed
-publishSbt=publish-local #publish-signed
+testQuick="" # test
+publishQuick=publish.local #publish.signed
+publishModule=publish-local #publish-signed
 
 # TODO: clean local repo, or publish to a fresh one
 
@@ -33,7 +34,7 @@ update() {
   [[ -d $2 ]] || git clone $repo
   cd $2
 
-#  git pull --rebase $repo $ref
+  git pull --rebase $repo $ref
 
   $buildLocal || (git fetch $repo $ref && git reset --hard FETCH_HEAD && git clean -fxd)
 
@@ -112,15 +113,16 @@ ant -Dstarr.version=$SCALA_VER\
     -Dscala-parser-combinators.version.number=$PARSERS_VER\
     -Dscalacheck.version.number=$SCALACHECK_VER\
     -Dupdate.versions=1\
+    -Dlocker.skip=1\
     -Dscalac.args.optimise=-optimise\
-    $publishAnt #test
+    $publishQuick $testQuick
 
 git commit versions.properties -m"Bump versions.properties for $SCALA_VER."
 
 tag "v$SCALA_VER" "Scala v$SCALA_VER"
 
 # rebuild modules for good measure
-publishModules $publishSbt
+publishModules $publishModule test
 
 say "Woo-hoo\!"
 
