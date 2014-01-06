@@ -1,6 +1,7 @@
 #!/bin/bash -ex
+# needs SONA_USER_TOKEN and ~/.m2/settings.xml with credentials for sonatype
 
-     MAVEN_SUFFIX="-M8"
+     MAVEN_SUFFIX="-M8-local"
         SCALA_VER="2.11.0$MAVEN_SUFFIX"
           XML_VER="1.0.0-RC7"
       PARSERS_VER="1.0.0-RC5"
@@ -23,6 +24,17 @@ $buildLocal || (
   read
 )
 
+stApi="https://oss.sonatype.org/service/local/"
+
+function st_curl(){
+  curl -H "accept: application/json" --user $SONA_USER_TOKEN -s -o - $@
+}
+
+function st_stagingRepo() {
+ st_curl "$stApi/staging/profile_repositories" | jq '.data[] | select(.profileName == "org.scala-lang") | .repositoryURI'
+}
+
+
 update() {
   $buildLocal && cd $baseDir/$2 && return 0
 
@@ -44,25 +56,26 @@ tag() { $buildLocal || (git tag -s $1 -m$2) ; }
 
 publishModules() {
   publishTask=$1
+  sonaStaging=$2
 
   # test and publish to sonatype, assuming you have ~/.sbt/0.13/sonatype.sbt and ~/.sbt/0.13/plugin/gpg.sbt
   update scala scala-xml
   tag "v$XML_VER" "Scala Standard XML Library v$XML_VER"
   sbt 'set version := "'$XML_VER'"' \
-      'set resolvers += Resolver.mavenLocal'\
+      'set resolvers += "staging" at "'$sonaStaging'"'\
       'set scalaVersion := "'$SCALA_VER'"' \
       clean test $publishTask publishM2
 
   update scala scala-parser-combinators
   tag "v$PARSERS_VER" "Scala Standard Parser Combinators Library v$PARSERS_VER"
   sbt 'set version := "'$PARSERS_VER'"' \
-      'set resolvers += Resolver.mavenLocal'\
+      'set resolvers += "'$sonaStaging'"'\
       'set scalaVersion := "'$SCALA_VER'"' \
       clean test $publishTask publishM2
 
   update rickynils scalacheck $SCALACHECK_VER
   sbt 'set version := "'$SCALACHECK_VER'"' \
-      'set resolvers += Resolver.mavenLocal'\
+      'set resolvers += "'$sonaStaging'"'\
       'set scalaVersion := "'$SCALA_VER'"' \
       'set every scalaBinaryVersion := "'$SCALA_VER'"' \
       'set VersionKeys.scalaParserCombinatorsVersion := "'$PARSERS_VER'"' \
@@ -71,7 +84,7 @@ publishModules() {
   update scala scala-partest
   tag "v$PARTEST_VER" "Scala Partest v$PARTEST_VER"
   sbt 'set version :="'$PARTEST_VER'"' \
-      'set resolvers += Resolver.mavenLocal'\
+      'set resolvers += "'$sonaStaging'"'\
       'set scalaVersion := "'$SCALA_VER'"' \
       'set VersionKeys.scalaXmlVersion := "'$XML_VER'"' \
       'set VersionKeys.scalaCheckVersion := "'$SCALACHECK_VER'"' \
@@ -80,7 +93,7 @@ publishModules() {
   update scala scala-partest-interface
   tag "v$PARTEST_IFACE_VER" "Scala Partest Interface v$PARTEST_IFACE_VER"
   sbt 'set version :="'$PARTEST_IFACE_VER'"' \
-      'set resolvers += Resolver.mavenLocal'\
+      'set resolvers += "'$sonaStaging'"'\
       'set scalaVersion := "'$SCALA_VER'"' \
       clean $publishTask publishM2
 }
@@ -94,10 +107,13 @@ ant -Dmaven.version.number=$SCALA_VER\
     -Dscalac.args.optimise=-optimise\
     -Ddocs.skip=1\
     -Dlocker.skip=1\
-    publish.local
+    publish
+
+stagingRepo=$(st_stagingRepo)
+echo "Scala core published to $stagingRepo"
 
 # build, test and publish modules with this core
-publishModules publish-local
+publishModules publish-local $stagingRepo
 
 # Rebuild Scala with these modules so that all binary versions are consistent.
 # Update versions.properties to new modules.
@@ -105,6 +121,7 @@ publishModules publish-local
 # don't skip locker (-Dlocker.skip=1\), or stability will fail
 cd $baseDir/scala
 ant -Dstarr.version=$SCALA_VER\
+    -Dextra.repo.url=$stagingRepo\
     -Dmaven.version.suffix=$MAVEN_SUFFIX\
     -Dscala.binary.version=$SCALA_VER\
     -Dpartest.version.number=$PARTEST_VER\
@@ -120,7 +137,7 @@ git commit versions.properties -m"Bump versions.properties for $SCALA_VER."
 tag "v$SCALA_VER" "Scala v$SCALA_VER"
 
 # rebuild modules for good measure
-publishModules $publishSbt
+publishModules test
 
 say "Woo-hoo\!"
 
