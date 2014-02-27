@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
    SCALA_VER_BASE=${SCALA_VER_BASE-"2.11.0"}
  SCALA_VER_SUFFIX=${SCALA_VER_SUFFIX-"-RC1"}
@@ -37,7 +37,7 @@ function getOrUpdate(){
 
     git clean -fxd
 
-    git log --oneline -1
+    git --no-pager log --oneline -1
 
     git status
 
@@ -53,26 +53,26 @@ update() {
 
 # no-op if tag exists
 tag() {
-  [[ -n $(g tag -l $1) ]] || git tag -s $1 -m"$2"
+  [[ -n $(git tag -l $1) ]] || git tag -s $1 -m"$2"
 }
 
-update scala scala $SCALA_REF
+update scala scala master
 tag "v$SCALA_VER" "Scala v$SCALA_VER"
 
-update scala scala-continuations $CONTINUATIONS_REF
+update scala scala-continuations master
 tag "v$CONTINUATIONS_VER" "Scala Delimited Continuations Library and Compiler Plugin v$CONTINUATIONS_VER"
 
-update scala scala-parser-combinators "$PARSERS_REF"
+update scala scala-parser-combinators master
 tag "v$PARSERS_VER" "Scala Standard Parser Combinators Library v$PARSERS_VER"
 
-update scala scala-partest "$PARTEST_REF"
+update scala scala-partest master
 tag "v$PARTEST_VER" "Scala Partest v$PARTEST_VER"
 
-update scala scala-partest-interface "$PARTEST_IFACE_REF"
+update scala scala-partest-interface master
 tag "v$PARTEST_IFACE_VER" "Scala Partest Interface v$PARTEST_IFACE_VER"
 
-update scala scala-swing "$SWING_REF"
+update scala scala-swing master
 tag "v$SWING_VER" "Scala Standard Swing Library v$SWING_VER"
 
-update scala scala-xml "$XML_REF"
+update scala scala-xml master
 tag "v$XML_VER" "Scala Standard XML Library v$XML_VER"
